@@ -195,10 +195,10 @@ def save_torch(num_set, type_set, type_file, channels=18):
     torch.save(tensor_label, f'../Files/Sets/Set{num_set}/{type_set}/{type_set}_labels.pt')
 
 
-# iterate('SEIZURES', 'TRAIN', 2, 1000, True)
-# iterate('SEIZURES', 'TEST', 2, 1000, True)
-# iterate('NON-SEIZURES', 'TRAIN', 2, 1000, True)
-# iterate('NON-SEIZURES', 'TEST', 2, 1000, True)
+# iterate('SEIZURES', 'TRAIN', 2, 1000, False)
+# iterate('SEIZURES', 'TEST', 2, 1000, False)
+# iterate('NON-SEIZURES', 'TRAIN', 2, 1000, False)
+# iterate('NON-SEIZURES', 'TEST', 2, 1000, False)
 
-save_torch('2', 'Test', 'encoded')
+# save_torch('2', 'Test', 'encoded')
 save_torch('2', 'Train', 'encoded')
