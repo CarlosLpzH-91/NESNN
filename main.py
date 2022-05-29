@@ -857,7 +857,7 @@ def run():
     population.add_reporter(neat.StdOutReporter(True))
     stats = neat.StatisticsReporter()
     population.add_reporter(stats)
-    population.run(eval_genome, 400)
+    population.run(eval_genome, 100)
     print(population.best_genome)
 
     visualize.draw_net(conf_test, population.best_genome)
@@ -873,15 +873,15 @@ if __name__ == '__main__':
     print(f'Total time of execution: {time.time() - stime}')
 
     # Saving best SNN
-    # i_nodes = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
-    # o_nodes = [18]
-    # conn = {k: v.values for k, v in best.connections.items() if v.enabled}
-    # _, h_nodes = build_hidden_layers(i_nodes, o_nodes, conn)
-    # snn_info = [h_nodes, conn]
-    # # num = input('Save number: ')
-    # num = 1
-    # with open(f'SavedSNNs/SNN_{num}.pkl', 'wb') as file:
-    #     pickle.dump(snn_info, file)
+    i_nodes = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
+    o_nodes = [18]
+    conn = {k: v.values for k, v in best.connections.items() if v.enabled}
+    _, h_nodes = build_hidden_layers(i_nodes, o_nodes, conn)
+    snn_info = [h_nodes, conn]
+    # num = input('Save number: ')
+    num = 1
+    with open(f'SavedSNNs/SNN_{num}.pkl', 'wb') as file:
+        pickle.dump(snn_info, file)
     #
     # print('\n------------Testing------------\n')
     # data = torch_load('BaseDatos/Data/Test1/76_Segments/test_tensor.pt')

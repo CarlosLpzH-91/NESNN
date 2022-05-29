@@ -1,7 +1,7 @@
 [NEAT]
 fitness_criterion = max
 fitness_threshold = 1.0
-pop_size = 50
+pop_size = 25
 reset_on_extinction = False
 # Fitness criterion and fitness threshold are ignore. Only end by generation limit.
 no_fitness_termination = False
@@ -25,7 +25,7 @@ min_species_size = 2
 
 [DefaultSpeciesSet]
 # R: 2.0
-compatibility_threshold = 2.0
+compatibility_threshold = 2.4
 
 [LIFGenome]
 # Mutations control
