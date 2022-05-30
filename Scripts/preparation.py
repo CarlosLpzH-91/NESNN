@@ -194,6 +194,7 @@ def save_torch(num_set, type_set, type_file, channels=18):
     tensor_label = torch.tensor(labels, dtype=torch.int8)
     torch.save(tensor_label, f'../Files/Sets/Set{num_set}/{type_set}/{type_set}_labels.pt')
 
+    times = [times[i] if label == 1 else -timeMax for i, label in enumerate(labels)]
     tensor_times = torch.tensor(times, dtype=torch.int16)
     torch.save(tensor_times, f'../Files/Sets/Set{num_set}/{type_set}/{type_set}_times.pt')
 

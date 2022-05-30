@@ -270,22 +270,29 @@ class Net:
         """
 
         # Number of examples
-        nData = test_data.shape[0]
+        nData = train_data.shape[0]
 
         # Control
         result = False
+        nTime = 0
 
         # Evaluation
         counter = 0
         tp, fp, fn, tn = 0, 0, 0, 0
+        sph = []
         avgTrigger = []
+        hiddenSpikes = []
 
-        for nStep, (batch, label) in enumerate(zip(test_data, test_label)):
+        for nStep, (batch, label, true_time) in enumerate(zip(test_data, test_label, test_times)):
             # print(f'Data {nStep + 1}.')
             for nTime, spikes in enumerate(batch):
                 self.network.run({"Input": spikes}, time=1, one_step=one_step)
                 result = self.monitorOut.get("s")[0, 0, 0]
+                if self.num_hidden > 0:
+                    hiddenSpikes.append(self.monitorHid.get('s'))
+
                 if result:
+                    sph.append(int(true_time - nTime))
                     avgTrigger.append(nTime)
                     break
 
@@ -305,7 +312,8 @@ class Net:
             elif label == 1 and result == 0:
                 fn += 1
 
-        return counter / nData, (len(avgTrigger), np.mean(avgTrigger)), {'TP': tp, 'FP': fp, 'FN': fn, 'TN': tn}
+        return counter / nData, (len(avgTrigger), np.mean(avgTrigger)), \
+               {'TP': tp, 'FP': fp, 'FN': fn, 'TN': tn, 'SPH': sph}, hiddenSpikes
 
     def play(self, data, labels, one_step=True, reset=True):
         """
@@ -879,7 +887,8 @@ def simulate(genome, config, simple=True):
 
 def eval_genome(genomes, config):
     for genome_id, genome in genomes:
-        genome.fitness, genome.others, genome.trigger, genome.time, genome.spikes = simulate(genome, config, simple=False)
+        genome.fitness, genome.others, genome.trigger, genome.time, genome.spikes = simulate(genome, config,
+                                                                                             simple=True)
 
 
 def run(num_test):
@@ -892,7 +901,7 @@ def run(num_test):
     population.add_reporter(neat.StdOutReporter(True))
     stats = neat.StatisticsReporter()
     population.add_reporter(stats)
-    population.run(eval_genome, 2)
+    population.run(eval_genome, 400)
     print(population.best_genome)
 
     visualize.draw_net(conf_test, population.best_genome, filename=f'Results/Net_{num_test}')
@@ -920,13 +929,9 @@ if __name__ == '__main__':
     with open(f'SavedSNNs/SNN_{num}.pkl', 'wb') as file:
         pickle.dump(snn_info, file)
     #
-    # print('\n------------Testing------------\n')
-    # data = torch_load('BaseDatos/Data/Test1/76_Segments/test_tensor.pt')
-    # labels = torch_load('BaseDatos/Data/Test1/76_Segments/test_labels.pt')
-    # # with open('BaseDatos/Data/Test1/test_labels.pkl', 'rb') as file:
-    # #     labels = pickle.load(file)
-    #
-    # snn = Net(in_nodes=i_nodes, out_nodes=o_nodes, hidden_nodes=h_nodes,
-    #           connections=conn, device='cpu')
-    # test_results = snn.simulation(data, labels)
-    # print(test_results)
+    print('\n------------Testing------------\n')
+
+    snn = Net(in_nodes=i_nodes, out_nodes=o_nodes, hidden_nodes=h_nodes,
+              connections=conn, device=device)
+    test_results = snn.test()
+    print(test_results)
