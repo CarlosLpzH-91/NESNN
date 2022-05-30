@@ -190,9 +190,12 @@ def save_torch(num_set, type_set, type_file, channels=18):
     else:
         tensor_data = torch.tensor(data, dtype=torch.float32)
         torch.save(tensor_data, f'../Files/Sets/Set{num_set}/{type_set}/{type_set}_data.pt')
-    tensor_label = torch.tensor(labels, dtype=torch.int8)
 
+    tensor_label = torch.tensor(labels, dtype=torch.int8)
     torch.save(tensor_label, f'../Files/Sets/Set{num_set}/{type_set}/{type_set}_labels.pt')
+
+    tensor_times = torch.tensor(times, dtype=torch.int16)
+    torch.save(tensor_times, f'../Files/Sets/Set{num_set}/{type_set}/{type_set}_times.pt')
 
 
 # iterate('SEIZURES', 'TRAIN', 2, 1000, False)
@@ -200,5 +203,5 @@ def save_torch(num_set, type_set, type_file, channels=18):
 # iterate('NON-SEIZURES', 'TRAIN', 2, 1000, False)
 # iterate('NON-SEIZURES', 'TEST', 2, 1000, False)
 
-# save_torch('2', 'Test', 'encoded')
+save_torch('2', 'Test', 'encoded')
 save_torch('2', 'Train', 'encoded')
