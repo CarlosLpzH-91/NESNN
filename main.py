@@ -33,10 +33,16 @@ from itertools import count
 
 device = 'cpu'  # cuda or cpu
 number = 2
+delimit = True
+limit = 10
+
+if not delimit:
+    limit = 168
 
 # Test Data
 test_label = torch.load(f'Files/Sets/Set{number}/TEST/Test_labels.pt', map_location=torch.device(device))
 test_data = torch.load(f'Files/Sets/Set{number}/TEST/Test_data_encoded.pt', map_location=torch.device(device))
+test_times = torch.load(f'Files/Sets/Set{number}/TEST/Test_times.pt', map_location=torch.device(device))
 vMin_test = -torch.min(test_data)
 test_data = test_data + vMin_test
 vMax_test = torch.max(test_data)
@@ -45,6 +51,14 @@ test_data = test_data / vMax_test
 # Train Data
 train_label = torch.load(f'Files/Sets/Set{number}/TRAIN/Train_labels.pt', map_location=torch.device(device))
 train_data = torch.load(f'Files/Sets/Set{number}/TRAIN/Train_data_encoded.pt', map_location=torch.device(device))
+train_times = torch.load(f'Files/Sets/Set{number}/TRAIN/Train_times.pt', map_location=torch.device(device))
+if delimit:
+    idx = torch.randperm(train_label.shape[0])[:limit]
+
+    train_label = train_label[idx]
+    train_data = train_data[idx]
+    train_times = train_times[idx]
+
 vMin_train = -torch.min(train_data)
 train_data = train_data + vMin_train
 vMax_train = torch.max(train_data)
@@ -203,19 +217,25 @@ class Net:
 
         # Control
         result = False
+        nTime = 0
 
         # Evaluation
         counter = 0
         tp, fp, fn, tn = 0, 0, 0, 0
+        sph = []
         avgTrigger = []
+        hiddenSpikes = []
         stme = time.time()
-        for nStep, (batch, label) in enumerate(zip(train_data, train_label)):
+        for nStep, (batch, label, true_time) in enumerate(zip(train_data, train_label, train_times)):
             # print(f'Data {nStep + 1}.')
 
             for nTime, spikes in enumerate(batch):
                 self.network.run({"Input": spikes}, time=1, one_step=one_step)
                 result = self.monitorOut.get("s")[0, 0, 0]
+                if self.num_hidden > 0:
+                    hiddenSpikes.append(self.monitorHid.get('s'))
                 if result:
+                    sph.append(int(true_time - nTime))
                     avgTrigger.append(nTime)
                     break
 
@@ -236,7 +256,8 @@ class Net:
                 fn += 1
 
         t = time.time() - stme
-        return counter / nData, (len(avgTrigger), np.mean(avgTrigger)), {'TP': tp, 'FP': fp, 'FN': fn, 'TN': tn}, t
+        return counter / nData, (len(avgTrigger), np.mean(avgTrigger)), \
+               {'TP': tp, 'FP': fp, 'FN': fn, 'TN': tn, 'SPH': sph}, t, hiddenSpikes
 
     def test(self, one_step=True, reset=True):
         """
@@ -478,6 +499,12 @@ class LIFGenome(object):
 
         # Fitness results
         self.fitness = None
+
+        # Other results
+        self.others = None
+        self.trigger = None
+        self.time = None
+        self.spikes = None
 
     def configure_new(self, config):
         # Create node genes for the output nodes.
@@ -821,7 +848,7 @@ def build_hidden_layers(inputs, outputs, connections):
     return layers, nodes
 
 
-def simulate(genome, config):
+def simulate(genome, config, simple=True):
     in_nodes = config.genome_config.input_keys
     out_nodes = config.genome_config.output_keys
     connections = {k: v.values for k, v in genome.connections.items() if v.enabled}
@@ -832,22 +859,30 @@ def simulate(genome, config):
     net = Net(in_nodes=in_nodes, out_nodes=out_nodes,
               hidden_nodes=hidden_nodes, connections=connections, device=device)
 
-    score, trigger, moreR, t = net.train()
+    accuracy, trigger, moreR, t, spikes = net.train()
 
     sens = moreR['TP'] / (moreR['TP'] + moreR['FN'])
     spec = moreR['TN'] / (moreR['TN'] + moreR['FP'])
-    print(f'Genome {genome.key} -> Acc: {score} - Sens: {sens} - Spec: {spec} - TP: {moreR["TP"]} - FP: {moreR["FP"]} '
-          f'- FN: {moreR["FN"]} - TN: {moreR["TN"]} - Trig-Count: {trigger[0]} - Trig-Avg: {trigger[1]} - time: {t}')
 
-    return score
+    # Simple means that the score is the accuracy. If false, the score will be set as the
+    #   Accuracy * Average SPH
+    if simple:
+        score = accuracy
+    else:
+        score = accuracy * np.mean(moreR['SPH'])
+    print(f'Genome {genome.key} -> Score: {score} - Acc: {accuracy} - Sens: {sens} - Spec: {spec} - TP: {moreR["TP"]} -'
+          f' FP: {moreR["FP"]}- FN: {moreR["FN"]} - TN: {moreR["TN"]} - Trig-Count: {trigger[0]} - '
+          f'Trig-Avg: {trigger[1]} - SPHs: {moreR["SPH"]}')
+
+    return score, moreR, trigger, t, spikes
 
 
 def eval_genome(genomes, config):
     for genome_id, genome in genomes:
-        genome.fitness = simulate(genome, config)
+        genome.fitness, genome.others, genome.trigger, genome.time, genome.spikes = simulate(genome, config, simple=False)
 
 
-def run():
+def run(num_test):
     print('Running')
     conf_file = 'config'
     conf_test = neat.Config(LIFGenome, neat.DefaultReproduction, neat.DefaultSpeciesSet,
@@ -857,19 +892,21 @@ def run():
     population.add_reporter(neat.StdOutReporter(True))
     stats = neat.StatisticsReporter()
     population.add_reporter(stats)
-    population.run(eval_genome, 100)
+    population.run(eval_genome, 2)
     print(population.best_genome)
 
-    visualize.draw_net(conf_test, population.best_genome)
-    visualize.plot_stats(stats, ylog=False, view=True)
-    visualize.plot_species(stats, view=True)
+    visualize.draw_net(conf_test, population.best_genome, filename=f'Results/Net_{num_test}')
+    visualize.plot_stats(stats, ylog=False, view=True, filename=f'Results/avg_fitness{num_test}.svg')
+    visualize.plot_species(stats, view=True, filename=f'Results/speciation{num_test}.svg')
 
     return population.best_genome, population
 
 
 if __name__ == '__main__':
+    num = 1
+
     stime = time.time()
-    best, population_ = run()
+    best, population_ = run(num)
     print(f'Total time of execution: {time.time() - stime}')
 
     # Saving best SNN
@@ -879,7 +916,7 @@ if __name__ == '__main__':
     _, h_nodes = build_hidden_layers(i_nodes, o_nodes, conn)
     snn_info = [h_nodes, conn]
     # num = input('Save number: ')
-    num = 1
+
     with open(f'SavedSNNs/SNN_{num}.pkl', 'wb') as file:
         pickle.dump(snn_info, file)
     #
