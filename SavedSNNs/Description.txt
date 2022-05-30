@@ -1,0 +1,5 @@
+In this directory:
+
+    - Saved SNNs
+
+Of all tests.
