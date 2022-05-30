@@ -1,10 +1,10 @@
 [NEAT]
 fitness_criterion = max
-fitness_threshold = 1.0
+fitness_threshold = 100
 pop_size = 25
 reset_on_extinction = False
 # Fitness criterion and fitness threshold are ignore. Only end by generation limit.
-no_fitness_termination = False
+no_fitness_termination = True
 
 [DefaultStagnation]
 species_fitness_func = max
