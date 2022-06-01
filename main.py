@@ -235,7 +235,7 @@ class Net:
                 if self.num_hidden > 0:
                     hiddenSpikes.append(self.monitorHid.get('s'))
                 if result:
-                    sph.append(int(true_time - nTime))
+                    _sph.append(int(true_time - nTime))
                     avgTrigger.append(nTime)
                     break
 
