@@ -222,7 +222,7 @@ class Net:
         # Evaluation
         counter = 0
         tp, fp, fn, tn = 0, 0, 0, 0
-        sph = []
+        _sph = []
         avgTrigger = []
         hiddenSpikes = []
         stme = time.time()
@@ -256,6 +256,7 @@ class Net:
                 fn += 1
 
         t = time.time() - stme
+        sph = counter * np.mean(_sph)
         return counter / nData, (len(avgTrigger), np.mean(avgTrigger)), \
                {'TP': tp, 'FP': fp, 'FN': fn, 'TN': tn, 'SPH': sph}, t, hiddenSpikes
 
