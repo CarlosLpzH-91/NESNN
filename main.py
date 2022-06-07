@@ -256,7 +256,11 @@ class Net:
                 fn += 1
 
         t = time.time() - stme
-        sph = counter * np.mean(_sph)
+        if _sph:
+            sph = counter * np.mean(_sph)
+        else:
+            sph = counter
+
         return counter / nData, (len(avgTrigger), np.mean(avgTrigger)), \
                {'TP': tp, 'FP': fp, 'FN': fn, 'TN': tn, 'SPH': sph}, t, hiddenSpikes
 
@@ -271,7 +275,7 @@ class Net:
         """
 
         # Number of examples
-        nData = train_data.shape[0]
+        nData = test_data.shape[0]
 
         # Control
         result = False
@@ -313,6 +317,8 @@ class Net:
             elif label == 1 and result == 0:
                 fn += 1
 
+        print(counter)
+        print(nData)
         return counter / nData, (len(avgTrigger), np.mean(avgTrigger)), \
                {'TP': tp, 'FP': fp, 'FN': fn, 'TN': tn, 'SPH': sph}, hiddenSpikes
 
@@ -902,7 +908,7 @@ def run(num_test):
     population.add_reporter(neat.StdOutReporter(True))
     stats = neat.StatisticsReporter()
     population.add_reporter(stats)
-    population.run(eval_genome, 400)
+    population.run(eval_genome, 4)
     print(population.best_genome)
 
     visualize.draw_net(conf_test, population.best_genome, filename=f'Results/Net_{num_test}')
