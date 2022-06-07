@@ -16,12 +16,12 @@ species_elitism = 1
 [DefaultReproduction]
 # The number of most-fit individuals in each species that will be preserved as-is from one generation to the next.
 # R: 2
-elitism = 1
+elitism = 3
 # The fraction for each species allowed to reproduce each generation.
 # R: 0.2
 survival_threshold = 0.3
 # The minimum number of genomes per species after reproduction.
-min_species_size = 2
+min_species_size = 1
 
 [DefaultSpeciesSet]
 # R: 2.0
@@ -42,11 +42,11 @@ values_init_mean          = 0
 # R: 1
 values_init_stdev         = 10
 # R: 30 & -30
-values_max_value          = 30
-values_min_value          = -30
+values_max_value          = 50
+values_min_value          = -10
 # The probability that mutation will change the weight of a connection by adding a random value.
 # R: 0.8
-values_mutate_rate        = 0.8
+values_mutate_rate        = 0.7
 # The probability that mutation will replace the weight of a connection with a newly chosen random value (as if it were a new connection).
 # R: 0.2
 values_replace_rate       = 0.1
@@ -60,8 +60,8 @@ compatibility_weight_coefficient   = 0.2
 
 # connection add/remove rates
 # R: 0.5 & 0.5
-conn_add_prob           = 0.6
-conn_delete_prob        = 0.4
+conn_add_prob           = 0.5
+conn_delete_prob        = 0.5
 
 # connection enable options
 enabled_default         = True
@@ -72,8 +72,8 @@ enabled_mutate_rate     = 0.01
 
 # node add/remove rates
 # R: 0.2 & 0.2
-node_add_prob           = 0.6
-node_delete_prob        = 0.4
+node_add_prob           = 0.4
+node_delete_prob        = 0.3
 
 # network parameters
 num_inputs              = 18
