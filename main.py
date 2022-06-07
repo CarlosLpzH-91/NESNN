@@ -34,7 +34,7 @@ from itertools import count
 device = 'cpu'  # cuda or cpu
 number = 2
 delimit = True
-limit = 10
+limit = 5
 
 if not delimit:
     limit = 168
