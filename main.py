@@ -10,6 +10,7 @@ import numpy as np
 from random import random, choice
 import pickle
 import time
+from sklearn.metrics import ConfusionMatrixDisplay
 
 from Scripts import visualize
 
@@ -34,7 +35,7 @@ from itertools import count
 device = 'cpu'  # cuda or cpu
 number = 2
 delimit = True
-limit = 5
+limit = 50
 
 if not delimit:
     limit = 168
@@ -202,7 +203,7 @@ class Net:
         return f'In Nodes: {self.in_nodes} - Out Nodes: {self.out_nodes} - ' \
                f'Hidden Nodes: {self.hidden_nodes} - Connections: {self.connections}'
 
-    def train(self, one_step=True, reset=True):
+    def train(self, one_step=True, reset=True, time_labeled=True):
         """
         Run a simulation of the SNN with the given data
         Former 'Simulation def'
@@ -214,6 +215,8 @@ class Net:
 
         # Number of examples
         nData = train_data.shape[0]
+        # Total time
+        tTime = train_data.shape[1]
 
         # Control
         result = False
@@ -235,7 +238,10 @@ class Net:
                 if self.num_hidden > 0:
                     hiddenSpikes.append(self.monitorHid.get('s'))
                 if result:
-                    _sph.append(int(true_time - nTime))
+                    if time_labeled:
+                        _sph.append(int(true_time - nTime))
+                    else:
+                        _sph.append(int(tTime - nTime - 1))
                     avgTrigger.append(nTime)
                     break
 
@@ -264,7 +270,7 @@ class Net:
         return counter / nData, (len(avgTrigger), np.mean(avgTrigger)), \
                {'TP': tp, 'FP': fp, 'FN': fn, 'TN': tn, 'SPH': sph}, t, hiddenSpikes
 
-    def test(self, one_step=True, reset=True):
+    def test(self, one_step=True, reset=True, time_labeled=True):
         """
         Run a simulation of the SNN with the given data
         Former 'Simulation def'
@@ -276,6 +282,8 @@ class Net:
 
         # Number of examples
         nData = test_data.shape[0]
+        # Total time
+        tTime = train_data.shape[1]
 
         # Control
         result = False
@@ -284,7 +292,7 @@ class Net:
         # Evaluation
         counter = 0
         tp, fp, fn, tn = 0, 0, 0, 0
-        sph = []
+        _sph = []
         avgTrigger = []
         hiddenSpikes = []
 
@@ -297,7 +305,10 @@ class Net:
                     hiddenSpikes.append(self.monitorHid.get('s'))
 
                 if result:
-                    sph.append(int(true_time - nTime))
+                    if time_labeled:
+                        _sph.append(int(true_time - nTime))
+                    else:
+                        _sph.append(int(tTime - nTime - 1))
                     avgTrigger.append(nTime)
                     break
 
@@ -320,7 +331,7 @@ class Net:
         print(counter)
         print(nData)
         return counter / nData, (len(avgTrigger), np.mean(avgTrigger)), \
-               {'TP': tp, 'FP': fp, 'FN': fn, 'TN': tn, 'SPH': sph}, hiddenSpikes
+               {'TP': tp, 'FP': fp, 'FN': fn, 'TN': tn, 'SPH': _sph}, hiddenSpikes
 
     def play(self, data, labels, one_step=True, reset=True):
         """
@@ -874,7 +885,7 @@ def simulate(genome, config, simple=True):
     net = Net(in_nodes=in_nodes, out_nodes=out_nodes,
               hidden_nodes=hidden_nodes, connections=connections, device=device)
 
-    accuracy, trigger, moreR, t, spikes = net.train()
+    accuracy, trigger, moreR, t, spikes = net.train(time_labeled=True)
 
     sens = moreR['TP'] / (moreR['TP'] + moreR['FN'])
     spec = moreR['TN'] / (moreR['TN'] + moreR['FP'])
@@ -882,7 +893,8 @@ def simulate(genome, config, simple=True):
     # Simple means that the score is the accuracy. If false, the score will be set as the
     #   Accuracy * Average SPH
     if simple:
-        score = accuracy
+        score = sens + spec
+        # score = accuracy
     else:
         score = accuracy * np.mean(moreR['SPH'])
     print(f'Genome {genome.key} -> Score: {score} - Acc: {accuracy} - Sens: {sens} - Spec: {spec} - TP: {moreR["TP"]} -'
@@ -908,7 +920,7 @@ def run(num_test):
     population.add_reporter(neat.StdOutReporter(True))
     stats = neat.StatisticsReporter()
     population.add_reporter(stats)
-    population.run(eval_genome, 4)
+    population.run(eval_genome, 2)
     print(population.best_genome)
 
     visualize.draw_net(conf_test, population.best_genome, filename=f'Results/Net_{num_test}')
@@ -940,5 +952,21 @@ if __name__ == '__main__':
 
     snn = Net(in_nodes=i_nodes, out_nodes=o_nodes, hidden_nodes=h_nodes,
               connections=conn, device=device)
-    test_results = snn.test()
-    print(test_results)
+    test_results = snn.test(time_labeled=False)
+
+    cm = np.array([[test_results[2]["TP"], test_results[2]["FP"]], [test_results[2]["FN"], test_results[2]["TN"]]])
+    sen = cm[0][0] / (cm[0][0] + cm[1][0])
+    spe = cm[1][1] / (cm[1][1] + cm[0][1])
+
+    print(f'Confusion Matrix: {cm.ravel()}')
+    print(f' Acc: {test_results[0]}')
+    print(f' TP: {cm[0][0]}')
+    print(f' FP: {cm[0][1]}')
+    print(f' FN: {cm[1][0]}')
+    print(f' TN: {cm[1][1]}')
+    print(f'Sensibililty: {sen}')
+    print(f'Specificity: {spe}')
+    print(f'Avg SPH: {np.mean(test_results[2]["SPH"])}')
+
+    cmPlot = ConfusionMatrixDisplay(cm, display_labels=['True', 'False'])
+    cmPlot.plot()
